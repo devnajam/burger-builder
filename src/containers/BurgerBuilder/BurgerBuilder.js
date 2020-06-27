@@ -1,12 +1,12 @@
-import React, { Component } from 'react';
+import React, { Component } from "react";
 
-import Burger from '../../components/Burger/Burger';
-import BuildControls from '../../components/Burger/BuildControls/BuildControls';
-import Modal from '../../components/UI/Modal/Modal';
-import OrderSummary from '../../components/Burger/OrderSummary/OrderSummary';
-import axios from '../../axios-orders';
-import Spinner from '../../components/UI/Spinner/Spinner';
-import withErrorHandler from '../../hoc/withErrorHandler/withErrorHandler';
+import Burger from "../../components/Burger/Burger";
+import BuildControls from "../../components/Burger/BuildControls/BuildControls";
+import Modal from "../../components/UI/Modal/Modal";
+import OrderSummary from "../../components/Burger/OrderSummary/OrderSummary";
+import axios from "../../axios-orders";
+import Spinner from "../../components/UI/Spinner/Spinner";
+import withErrorHandler from "../../hoc/withErrorHandler/withErrorHandler";
 
 const INGREDIENT_PRICES = {
   salad: 0.5,
@@ -17,17 +17,20 @@ const INGREDIENT_PRICES = {
 
 class BurgerBuilder extends Component {
   state = {
-    ingredients: {
-      salad: 0,
-      chicken: 0,
-      cheese: 0,
-      meat: 0,
-    },
+    ingredients: null,
     totalPrice: 4,
     perchasable: false,
     purchasing: false,
     loading: false,
   };
+
+  componentDidMount() {
+    axios
+      .get("https://angry-react-burger.firebaseio.com/ingredients.json")
+      .then((response) => {
+        this.setState({ ingredients: response.data });
+      });
+  }
 
   purchaseHandler = () => {
     this.setState({ purchasing: true });
@@ -89,16 +92,16 @@ class BurgerBuilder extends Component {
       ingredients: this.state.ingredients,
       price: this.state.totalPrice,
       customer: {
-        name: 'Najam Iftikhar',
-        address: 'Pakistan',
-        zipCode: '43434',
-        country: 'Island',
-        email: 'angry@najam.com',
+        name: "Najam Iftikhar",
+        address: "Pakistan",
+        zipCode: "43434",
+        country: "Island",
+        email: "angry@najam.com",
       },
-      deliveryMethod: 'Light',
+      deliveryMethod: "Light",
     };
     axios
-      .post('/orders.json', order)
+      .post("/orders.json", order)
       .then((response) => {
         this.setState({ loading: false, purchasing: false });
       })
@@ -116,14 +119,33 @@ class BurgerBuilder extends Component {
       disableInfo[key] = disableInfo[key] <= 0;
     }
 
-    let orderSummary = (
-      <OrderSummary
-        price={this.state.totalPrice.toFixed(2)}
-        purchaseCancelled={this.purchaseCancelHandler}
-        purchaseContinued={this.purchaseContinueHandler}
-        ingredients={this.state.ingredients}
-      />
-    );
+    let orderSummary = null;
+
+    let burger = <Spinner />;
+
+    if (this.state.ingredients) {
+      burger = (
+        <React.Fragment>
+          <Burger ingredients={this.state.ingredients} />
+          <BuildControls
+            ordered={this.purchaseHandler}
+            perchasable={this.state.perchasable}
+            price={this.state.totalPrice}
+            disabled={disableInfo}
+            ingredientRemoved={this.removeIngredientHandler}
+            ingredientAdded={this.addIngredientHandler}
+          />
+        </React.Fragment>
+      );
+      orderSummary = (
+        <OrderSummary
+          price={this.state.totalPrice.toFixed(2)}
+          purchaseCancelled={this.purchaseCancelHandler}
+          purchaseContinued={this.purchaseContinueHandler}
+          ingredients={this.state.ingredients}
+        />
+      );
+    }
     if (this.state.loading) {
       orderSummary = <Spinner />;
     }
@@ -136,15 +158,7 @@ class BurgerBuilder extends Component {
         >
           {orderSummary}
         </Modal>
-        <Burger ingredients={this.state.ingredients} />
-        <BuildControls
-          ordered={this.purchaseHandler}
-          perchasable={this.state.perchasable}
-          price={this.state.totalPrice}
-          disabled={disableInfo}
-          ingredientRemoved={this.removeIngredientHandler}
-          ingredientAdded={this.addIngredientHandler}
-        />
+        {burger}
       </React.Fragment>
     );
   }
